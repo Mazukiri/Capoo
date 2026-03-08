@@ -136,8 +136,15 @@ client.on('messageCreate', async (message) => {
         // match[2] là tên nếu dùng picker (<:tên:id>), match[4] là tên nếu gõ chay (:tên:)
         const emoteName = (match[2] || match[4]).toLowerCase();
         
-        if (gifs[emoteName]) {
-            newContent = newContent.replace(match[0], gifs[emoteName]);
+        // Tìm kiếm mờ (Fuzzy find) để người dùng tải lên tên file có dính số hoặc tiền tố/hậu tố vẫn nhận ra
+        let matchedGifUrl = gifs[emoteName];
+        if (!matchedGifUrl) {
+            const possibleKey = Object.keys(gifs).find(key => emoteName.includes(key) || key.includes(emoteName));
+            if (possibleKey) matchedGifUrl = gifs[possibleKey];
+        }
+
+        if (matchedGifUrl) {
+            newContent = newContent.replace(match[0], matchedGifUrl);
             hasReplaced = true;
         }
     }
