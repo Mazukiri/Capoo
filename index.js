@@ -18,6 +18,12 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+client.on('debug', console.log);
+client.on('warn', console.log);
+client.on('error', console.error);
+
+console.log("Token check:", process.env.DISCORD_TOKEN ? "CÓ TOKEN, độ dài: " + process.env.DISCORD_TOKEN.length : "KHÔNG CÓ TOKEN");
+
 // Tạo danh sách các emoji từ file gifs.json để làm gợi ý cho Menu (Discord giới hạn tối đa 25 gợi ý do giới hạn của 1 command option)
 const gifChoices = Object.keys(gifs).slice(0, 25).map(key => ({
     name: key,
