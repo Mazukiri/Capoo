@@ -9,6 +9,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('Bot is ALIVE!'));
 
+const { Agent } = require('undici');
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -16,6 +18,11 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    rest: {
+        agent: new Agent({ connect: { lookup: (hostname, options, callback) => {
+            dns.lookup(hostname, { family: 4 }, callback);
+        }}})
+    }
 });
 
 client.on('debug', console.log);
