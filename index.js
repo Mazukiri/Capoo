@@ -68,7 +68,7 @@ client.on('interactionCreate', async interaction => {
         const gifUrl = gifs[loai];
 
         if (gifUrl) {
-            // Thay vì bot gửi, chúng ta có thể dùng Webhook để giả danh người dùng giống y chang emoji
+            await interaction.deferReply({ ephemeral: true });
             try {
                 const webhooks = await interaction.channel.fetchWebhooks();
                 let webhook = webhooks.find(wh => wh.token);
@@ -87,13 +87,13 @@ client.on('interactionCreate', async interaction => {
                 });
 
                 // Báo cho bot biết là đã xử lý xong để nó khỏi báo lỗi, sau đó xóa tin nhắn báo cáo đi
-                await interaction.reply({ content: 'Đã gửi!', ephemeral: true });
+                await interaction.editReply({ content: 'Đã gửi!' });
                 await interaction.deleteReply();
                 
             } catch (error) {
                 console.error(error);
                 // Nếu lỗi, để bot trả lời bình thường thay vì giả danh
-                await interaction.reply({ content: gifUrl });
+                await interaction.editReply({ content: gifUrl });
             }
         } else {
             await interaction.reply({ content: 'Capoo này không tồn tại!', ephemeral: true });
@@ -101,17 +101,20 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Tính năng 2: Vẫn giữ hỗ trợ tự động thay thế nếu gõ :capoo_love:
+// Tính năng 2: Tự động thay thế nếu gõ :capoo_love: HOẶC chọn từ emoji tĩnh của server <:capoo_love:123>
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    const emojiRegex = /:([a-zA-Z0-9_]+):/g;
+    // Regex tìm kiếm các đoạn text như :capoo_love:, hoặc emoji thật của discord dạng <:capoo_love:123456789>
+    const emojiRegex = /<(a?):([a-zA-Z0-9_\-]+):(\d+)>|:([a-zA-Z0-9_\-]+):/g;
     let match;
     let hasReplaced = false;
     let newContent = message.content;
 
     while ((match = emojiRegex.exec(message.content)) !== null) {
-        const emoteName = match[1].toLowerCase();
+        // match[2] là tên nếu dùng picker (<:tên:id>), match[4] là tên nếu gõ chay (:tên:)
+        const emoteName = (match[2] || match[4]).toLowerCase();
+        
         if (gifs[emoteName]) {
             newContent = newContent.replace(match[0], gifs[emoteName]);
             hasReplaced = true;
