@@ -7,9 +7,7 @@ const gifs = require('./gifs.json');
 
 const app = express();
 const port = process.env.PORT || 3000;
-
 app.get('/', (req, res) => res.send('Bot is ALIVE!'));
-app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const client = new Client({
     intents: [
@@ -157,7 +155,10 @@ client.on('messageCreate', async (message) => {
 if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_here') {
     client.login(process.env.DISCORD_TOKEN).then(() => {
         console.log("Login Promise Resolved!");
+        app.listen(port, () => console.log(`Express web server is running on port ${port}`));
     }).catch(error => {
         console.error("LỖI KHI ĐĂNG NHẬP BOT:", error);
     });
+} else {
+    app.listen(port, () => console.log(`Express web server is running on port ${port} (Bot disabled)`));
 }
