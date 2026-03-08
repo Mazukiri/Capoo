@@ -1,4 +1,6 @@
 require('dotenv').config();
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const express = require('express');
 const gifs = require('./gifs.json');
@@ -153,5 +155,9 @@ client.on('messageCreate', async (message) => {
 });
 
 if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_here') {
-    client.login(process.env.DISCORD_TOKEN);
+    client.login(process.env.DISCORD_TOKEN).then(() => {
+        console.log("Login Promise Resolved!");
+    }).catch(error => {
+        console.error("LỖI KHI ĐĂNG NHẬP BOT:", error);
+    });
 }
