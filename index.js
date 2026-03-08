@@ -1,15 +1,15 @@
 require('dotenv').config();
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
+
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const express = require('express');
 const gifs = require('./gifs.json');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 app.get('/', (req, res) => res.send('Bot is ALIVE!'));
-
-const { Agent } = require('undici');
+app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const client = new Client({
     intents: [
@@ -18,11 +18,6 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-    rest: {
-        agent: new Agent({ connect: { lookup: (hostname, options, callback) => {
-            dns.lookup(hostname, { family: 4 }, callback);
-        }}})
-    }
 });
 
 client.on('debug', console.log);
@@ -161,11 +156,8 @@ client.on('messageCreate', async (message) => {
 
 if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_here') {
     client.login(process.env.DISCORD_TOKEN).then(() => {
-        console.log("Login Promise Resolved!");
-        app.listen(port, () => console.log(`Express web server is running on port ${port}`));
+        console.log("=> LOGIN API THÀNH CÔNG, ĐANG ĐỢI WEBSOCKET GATEWAY KẾT NỐI...");
     }).catch(error => {
         console.error("LỖI KHI ĐĂNG NHẬP BOT:", error);
     });
-} else {
-    app.listen(port, () => console.log(`Express web server is running on port ${port} (Bot disabled)`));
 }
