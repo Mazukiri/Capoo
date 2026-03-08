@@ -1,6 +1,19 @@
 require('dotenv').config();
 const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const originalDnsLookup = dns.lookup;
+dns.lookup = function(hostname, options, callback) {
+    let cb = callback;
+    let opts = options;
+    if (typeof options === 'function') {
+        cb = options;
+        opts = { family: 4 };
+    } else if (typeof options === 'object' && options !== null) {
+        opts = { ...options, family: 4 };
+    } else {
+        opts = { family: 4 };
+    }
+    return originalDnsLookup(hostname, opts, cb);
+};
 
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const express = require('express');
