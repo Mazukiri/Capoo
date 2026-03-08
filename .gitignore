@@ -1,0 +1,4 @@
+.env
+node_modules
+push_error.txt
+push_error2.txt
