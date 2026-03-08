@@ -3,6 +3,7 @@ const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Agent } = require('undici');
 const express = require('express');
 const gifs = require('./gifs.json');
 
@@ -11,6 +12,14 @@ const port = process.env.PORT || 10000;
 app.get('/', (req, res) => res.send('Bot is ALIVE!'));
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
+const customAgent = new Agent({
+    connect: {
+        lookup: (hostname, options, callback) => {
+            dns.lookup(hostname, Object.assign({}, options, { family: 4 }), callback);
+        }
+    }
+});
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -18,6 +27,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    rest: { agent: customAgent }
 });
 
 client.on('debug', console.log);
@@ -46,7 +56,7 @@ const commands = [
 
 // Tránh lỗi khi token chưa có
 if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_here') {
-    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+    const rest = new REST({ version: '10', agent: customAgent }).setToken(process.env.DISCORD_TOKEN);
 
     client.on('ready', async () => {
         console.log(`Đã đăng nhập thành công bot: ${client.user.tag}! Capoo đã sẵn sàng!`);
