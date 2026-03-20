@@ -15,9 +15,29 @@ dns.lookup = function(hostname, options, callback) {
     return originalDnsLookup(hostname, opts, cb);
 };
 
-const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const express = require('express');
-const gifs = require('./gifs.json');
+const fs = require('fs');
+
+const gifs = {};
+
+if (fs.existsSync('./png')) {
+    for (const file of fs.readdirSync('./png')) {
+        if (file.endsWith('.png')) {
+            const key = file.replace(/^\d+-/, '').replace('.png', '').toLowerCase();
+            gifs[key] = { path: `./png/${file}`, attachmentName: file };
+        }
+    }
+}
+
+if (fs.existsSync('./gif')) {
+    for (const file of fs.readdirSync('./gif')) {
+        if (file.endsWith('.gif')) {
+            const key = file.replace(/^\d+-/, '').replace('.gif', '').toLowerCase();
+            gifs[key] = { path: `./gif/${file}`, attachmentName: file };
+        }
+    }
+}
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -86,9 +106,9 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.commandName === 'capoo') {
         const loai = interaction.options.getString('loai');
-        const gifUrl = gifs[loai];
+        const matchedEmoji = gifs[loai];
 
-        if (gifUrl) {
+        if (matchedEmoji) {
             await interaction.deferReply({ ephemeral: true });
             try {
                 const webhooks = await interaction.channel.fetchWebhooks();
@@ -101,8 +121,11 @@ client.on('interactionCreate', async interaction => {
                     });
                 }
 
+                const file = new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName });
+
                 await webhook.send({
-                    content: gifUrl,
+                    content: " ",
+                    files: [file],
                     username: interaction.member?.displayName || interaction.user.username,
                     avatarURL: interaction.user.displayAvatarURL({ dynamic: true })
                 });
@@ -114,7 +137,8 @@ client.on('interactionCreate', async interaction => {
             } catch (error) {
                 console.error(error);
                 // Nếu lỗi, để bot trả lời bình thường thay vì giả danh
-                await interaction.editReply({ content: gifUrl });
+                const file = new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName });
+                await interaction.editReply({ content: 'Lỗi gửi qua webhook, gửi trực tiếp:', files: [file] });
             }
         } else {
             await interaction.reply({ content: 'Capoo này không tồn tại!', ephemeral: true });
@@ -131,20 +155,22 @@ client.on('messageCreate', async (message) => {
     let match;
     let hasReplaced = false;
     let newContent = message.content;
+    let filesToSend = [];
 
     while ((match = emojiRegex.exec(message.content)) !== null) {
         // match[2] là tên nếu dùng picker (<:tên:id>), match[4] là tên nếu gõ chay (:tên:)
         const emoteName = (match[2] || match[4]).toLowerCase();
         
         // Tìm kiếm mờ (Fuzzy find) để người dùng tải lên tên file có dính số hoặc tiền tố/hậu tố vẫn nhận ra
-        let matchedGifUrl = gifs[emoteName];
-        if (!matchedGifUrl) {
+        let matchedEmoji = gifs[emoteName];
+        if (!matchedEmoji) {
             const possibleKey = Object.keys(gifs).find(key => emoteName.includes(key) || key.includes(emoteName));
-            if (possibleKey) matchedGifUrl = gifs[possibleKey];
+            if (possibleKey) matchedEmoji = gifs[possibleKey];
         }
 
-        if (matchedGifUrl) {
-            newContent = newContent.replace(match[0], matchedGifUrl);
+        if (matchedEmoji) {
+            newContent = newContent.replace(match[0], '');
+            filesToSend.push(new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName }));
             hasReplaced = true;
         }
     }
@@ -161,14 +187,17 @@ client.on('messageCreate', async (message) => {
                 });
             }
 
+            const finalContent = newContent.trim() !== "" ? newContent.trim() : " ";
             await webhook.send({
-                content: newContent !== "" ? newContent : " ",
+                content: finalContent,
+                files: filesToSend,
                 username: message.member?.displayName || message.author.username,
                 avatarURL: message.author.displayAvatarURL({ dynamic: true })
             });
             await message.delete();
         } catch (error) {
-            await message.channel.send(`**${message.member?.displayName || message.author.username}**:\n${newContent}`);
+            const finalContent = newContent.trim() !== "" ? newContent.trim() : " ";
+            await message.channel.send({ content: `**${message.member?.displayName || message.author.username}**:\n${finalContent}`, files: filesToSend });
             try { await message.delete(); } catch(e) {}
         }
     }
