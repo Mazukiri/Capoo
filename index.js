@@ -59,21 +59,15 @@ client.on('error', console.error);
 
 console.log("Token check:", process.env.DISCORD_TOKEN ? "CÓ TOKEN, độ dài: " + process.env.DISCORD_TOKEN.length : "KHÔNG CÓ TOKEN");
 
-// Tạo danh sách các emoji từ file gifs.json để làm gợi ý cho Menu (Discord giới hạn tối đa 25 gợi ý do giới hạn của 1 command option)
-const gifChoices = Object.keys(gifs).slice(0, 25).map(key => ({
-    name: key,
-    value: key
-}));
-
 const commands = [
     new SlashCommandBuilder()
         .setName('capoo')
         .setDescription('Gửi một chiếc Capoo siêu dễ thương!')
         .addStringOption(option => 
             option.setName('loai')
-                .setDescription('Chọn loại Capoo bạn muốn gửi')
+                .setDescription('Gõ tên Capoo để tìm nhanh (nhập một phần tên)')
                 .setRequired(true)
-                .addChoices(...gifChoices)
+                .setAutocomplete(true)
         )
 ];
 
@@ -102,6 +96,16 @@ if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_h
 
 // Xử lý khi người dùng dùng Lệnh /capoo
 client.on('interactionCreate', async interaction => {
+    if (interaction.isAutocomplete()) {
+        const focusedValue = interaction.options.getFocused().toLowerCase();
+        const choices = Object.keys(gifs);
+        const filtered = choices.filter(choice => choice.includes(focusedValue));
+        await interaction.respond(
+            filtered.slice(0, 25).map(choice => ({ name: choice, value: choice }))
+        );
+        return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'capoo') {
@@ -159,12 +163,16 @@ client.on('messageCreate', async (message) => {
 
     while ((match = emojiRegex.exec(message.content)) !== null) {
         // match[2] là tên nếu dùng picker (<:tên:id>), match[4] là tên nếu gõ chay (:tên:)
-        const emoteName = (match[2] || match[4]).toLowerCase();
+        const emoteNameRaw = (match[2] || match[4]).toLowerCase();
+        const emoteNameClean = emoteNameRaw.replace(/[-_]/g, '');
         
-        // Tìm kiếm mờ (Fuzzy find) để người dùng tải lên tên file có dính số hoặc tiền tố/hậu tố vẫn nhận ra
-        let matchedEmoji = gifs[emoteName];
+        let matchedEmoji = gifs[emoteNameRaw];
         if (!matchedEmoji) {
-            const possibleKey = Object.keys(gifs).find(key => emoteName.includes(key) || key.includes(emoteName));
+            // Tìm kiếm (Fuzzy find) và bỏ qua gạch ngang/gạch dưới để khỏi bị trượt do Discord chuyển '-' thành '_'
+            const possibleKey = Object.keys(gifs).find(key => {
+                const cleanKey = key.replace(/[-_]/g, '');
+                return cleanKey === emoteNameClean || emoteNameClean.includes(cleanKey) || cleanKey.includes(emoteNameClean);
+            });
             if (possibleKey) matchedEmoji = gifs[possibleKey];
         }
 
