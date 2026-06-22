@@ -107,9 +107,14 @@ client.on('interactionCreate', async interaction => {
         const focusedValue = interaction.options.getFocused().toLowerCase();
         const choices = Object.keys(gifs);
         const filtered = choices.filter(choice => choice.includes(focusedValue));
-        await interaction.respond(
-            filtered.slice(0, 25).map(choice => ({ name: choice, value: choice }))
-        );
+        try {
+            await interaction.respond(
+                filtered.slice(0, 25).map(choice => ({ name: choice, value: choice }))
+            );
+        } catch (e) {
+            // 10062 = interaction expired, 40060 = already acknowledged (cả hai do rolling deploy overlap)
+            if (e.code !== 10062 && e.code !== 40060) console.error(e);
+        }
         return;
     }
 
