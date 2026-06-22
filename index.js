@@ -1,7 +1,7 @@
 require('dotenv').config();
 const dns = require('dns');
 const originalDnsLookup = dns.lookup;
-dns.lookup = function(hostname, options, callback) {
+dns.lookup = function (hostname, options, callback) {
     let cb = callback;
     let opts = options;
     if (typeof options === 'function') {
@@ -19,25 +19,32 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, 
 const express = require('express');
 const fs = require('fs');
 
+const VERSION = process.env.VERSION || 'v1';
+console.log(`Đang dùng version: ${VERSION}`);
+
 const gifs = {};
 
-if (fs.existsSync('./png')) {
-    for (const file of fs.readdirSync('./png')) {
+const pngDir = `./png/${VERSION}`;
+if (fs.existsSync(pngDir)) {
+    for (const file of fs.readdirSync(pngDir)) {
         if (file.endsWith('.png')) {
             const key = file.replace(/^\d+-/, '').replace('.png', '').toLowerCase();
-            gifs[key] = { path: `./png/${file}`, attachmentName: file };
+            gifs[key] = { path: `${pngDir}/${file}`, attachmentName: file };
         }
     }
 }
 
-if (fs.existsSync('./gif')) {
-    for (const file of fs.readdirSync('./gif')) {
+const gifDir = `./gif/${VERSION}`;
+if (fs.existsSync(gifDir)) {
+    for (const file of fs.readdirSync(gifDir)) {
         if (file.endsWith('.gif')) {
             const key = file.replace(/^\d+-/, '').replace('.gif', '').toLowerCase();
-            gifs[key] = { path: `./gif/${file}`, attachmentName: file };
+            gifs[key] = { path: `${gifDir}/${file}`, attachmentName: file };
         }
     }
 }
+
+console.log(`Đã load ${Object.keys(gifs).length} emoji từ ${VERSION}`);
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -63,7 +70,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('capoo')
         .setDescription('Gửi một chiếc Capoo siêu dễ thương!')
-        .addStringOption(option => 
+        .addStringOption(option =>
             option.setName('loai')
                 .setDescription('Gõ tên Capoo để tìm nhanh (nhập một phần tên)')
                 .setRequired(true)
@@ -77,7 +84,7 @@ if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_h
 
     client.on('ready', async () => {
         console.log(`Đã đăng nhập thành công bot: ${client.user.tag}! Capoo đã sẵn sàng!`);
-        
+
         try {
             console.log('Đang cập nhật danh sách lệnh (Slash Commands)...');
             await rest.put(
@@ -137,7 +144,7 @@ client.on('interactionCreate', async interaction => {
                 // Báo cho bot biết là đã xử lý xong để nó khỏi báo lỗi, sau đó xóa tin nhắn báo cáo đi
                 await interaction.editReply({ content: 'Đã gửi!' });
                 await interaction.deleteReply();
-                
+
             } catch (error) {
                 console.error(error);
                 // Nếu lỗi, để bot trả lời bình thường thay vì giả danh
@@ -165,7 +172,7 @@ client.on('messageCreate', async (message) => {
         // match[2] là tên nếu dùng picker (<:tên:id>), match[4] là tên nếu gõ chay (:tên:)
         const emoteNameRaw = (match[2] || match[4]).toLowerCase();
         const emoteNameClean = emoteNameRaw.replace(/[-_]/g, '');
-        
+
         let matchedEmoji = gifs[emoteNameRaw];
         if (!matchedEmoji) {
             // Tìm kiếm (Fuzzy find) và bỏ qua gạch ngang/gạch dưới để khỏi bị trượt do Discord chuyển '-' thành '_'
@@ -206,7 +213,7 @@ client.on('messageCreate', async (message) => {
         } catch (error) {
             const finalContent = newContent.trim() !== "" ? newContent.trim() : " ";
             await message.channel.send({ content: `**${message.member?.displayName || message.author.username}**:\n${finalContent}`, files: filesToSend });
-            try { await message.delete(); } catch(e) {}
+            try { await message.delete(); } catch (e) { }
         }
     }
 });
