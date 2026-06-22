@@ -16,9 +16,6 @@
     "ws": "^8.18.1"
   },
   "devDependencies": {
-    "gif-encoder-2": "^1.0.5",
-    "gifuct-js": "^2.1.2",
-    "jimp": "^1.6.1",
-    "omggif": "^1.0.10"
+    "jimp": "^1.6.1"
   }
 }
