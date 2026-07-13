@@ -24,21 +24,29 @@ console.log(`Đang dùng version: ${VERSION}`);
 
 const gifs = {};
 
-const pngDir = `./png/${VERSION}`;
-if (fs.existsSync(pngDir)) {
-    for (const file of fs.readdirSync(pngDir)) {
-        if (file.endsWith('.png')) {
-            const key = file.replace(/^\d+-/, '').replace('.png', '').toLowerCase();
-            gifs[key] = { path: `${pngDir}/${file}`, attachmentName: file };
-        }
-    }
-}
-
 const gifDir = `./gif/${VERSION}`;
+const pngDir = `./png/${VERSION}`;
+
 if (fs.existsSync(gifDir)) {
+    let pngFiles = [];
+    if (fs.existsSync(pngDir)) {
+        pngFiles = fs.readdirSync(pngDir).filter(file => file.endsWith('.png'));
+    }
+
     for (const file of fs.readdirSync(gifDir)) {
         if (file.endsWith('.gif')) {
-            const key = file.replace(/^\d+-/, '').replace('.gif', '').toLowerCase();
+            const baseName = file.replace(/^\d+-/, '').replace('.gif', '').toLowerCase();
+            
+            // Tìm file PNG tương ứng để lấy tên đầy đủ làm key
+            const correspondingPng = pngFiles.find(p => 
+                p.replace(/^\d+-/, '').replace('.png', '').toLowerCase() === baseName
+            );
+
+            // Dùng tên file PNG (bỏ .png) làm key nếu tìm thấy, ngược lại dùng tên file GIF bỏ extension
+            const key = correspondingPng 
+                ? correspondingPng.replace('.png', '').toLowerCase() 
+                : file.replace(/^\d+-/, '').replace('.gif', '').toLowerCase();
+
             gifs[key] = { path: `${gifDir}/${file}`, attachmentName: file };
         }
     }
