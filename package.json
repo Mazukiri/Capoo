@@ -4,7 +4,8 @@
   "description": "Bugcat Capoo Discord Bot for servers without Nitro",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "sync-emojis": "node scripts/sync-emojis.js"
   },
   "engines": {
     "node": "20.x"
