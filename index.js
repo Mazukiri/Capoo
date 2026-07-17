@@ -52,6 +52,18 @@ if (fs.existsSync(gifDir)) {
     }
 }
 
+// Bảng tra theo tên đã bỏ hết -/_ , để :bugcat-94: và :bugcat_94: cùng trỏ về một chỗ
+// (Discord hay đổi '-' thành '_'). Dựng sẵn một lần để mỗi tin nhắn chỉ tra O(1).
+const gifsNormalized = {};
+for (const [key, value] of Object.entries(gifs)) {
+    gifsNormalized[key.replace(/[-_]/g, '')] = value;
+}
+
+// Nạp sẵn file vào RAM để mỗi lần gửi khỏi phải đọc đĩa (cả bộ chỉ ~2MB).
+for (const value of Object.values(gifs)) {
+    value.buffer = fs.readFileSync(value.path);
+}
+
 console.log(`Đã load ${Object.keys(gifs).length} emoji từ ${VERSION}`);
 
 const app = express();
@@ -68,7 +80,10 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-client.on('debug', console.log);
+// 'debug' đổ mọi packet gateway (kể cả heartbeat) ra stdout mỗi giây; ghi stdout là
+// thao tác đồng bộ nên nó ăn CPU và I/O ngay trên đường gửi emoji. Bật lại bằng
+// DISCORD_DEBUG=1 khi cần soi kết nối.
+if (process.env.DISCORD_DEBUG === '1') client.on('debug', console.log);
 client.on('warn', console.log);
 client.on('error', console.error);
 
@@ -170,7 +185,7 @@ client.on('interactionCreate', async interaction => {
         if (matchedEmoji) {
             await interaction.deferReply({ ephemeral: true });
             try {
-                const file = new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName });
+                const file = new AttachmentBuilder(matchedEmoji.buffer, { name: matchedEmoji.attachmentName });
 
                 await sendViaWebhook(interaction.channel, {
                     content: " ",
@@ -186,7 +201,7 @@ client.on('interactionCreate', async interaction => {
             } catch (error) {
                 console.error(error);
                 // Nếu lỗi, để bot trả lời bình thường thay vì giả danh
-                const file = new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName });
+                const file = new AttachmentBuilder(matchedEmoji.buffer, { name: matchedEmoji.attachmentName });
                 await interaction.editReply({ content: 'Lỗi gửi qua webhook, gửi trực tiếp:', files: [file] });
             }
         } else {
@@ -211,19 +226,14 @@ client.on('messageCreate', async (message) => {
         const emoteNameRaw = (match[2] || match[4]).toLowerCase();
         const emoteNameClean = emoteNameRaw.replace(/[-_]/g, '');
 
-        let matchedEmoji = gifs[emoteNameRaw];
-        if (!matchedEmoji) {
-            // Tìm kiếm (Fuzzy find) và bỏ qua gạch ngang/gạch dưới để khỏi bị trượt do Discord chuyển '-' thành '_'
-            const possibleKey = Object.keys(gifs).find(key => {
-                const cleanKey = key.replace(/[-_]/g, '');
-                return cleanKey === emoteNameClean || emoteNameClean.includes(cleanKey) || cleanKey.includes(emoteNameClean);
-            });
-            if (possibleKey) matchedEmoji = gifs[possibleKey];
-        }
+        // Chỉ khớp chính xác (sau khi bỏ -/_). Trước đây chỗ này so bằng includes() hai
+        // chiều nên mọi chuỗi ngắn đều dính: ":30:" trong "hop luc 10:30:" khớp bugcat30,
+        // khiến bot xoá nhầm tin nhắn thường rồi đăng lại kèm emoji.
+        const matchedEmoji = gifs[emoteNameRaw] || gifsNormalized[emoteNameClean];
 
         if (matchedEmoji) {
             newContent = newContent.replace(match[0], '');
-            filesToSend.push(new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName }));
+            filesToSend.push(new AttachmentBuilder(matchedEmoji.buffer, { name: matchedEmoji.attachmentName }));
             hasReplaced = true;
         }
     }
