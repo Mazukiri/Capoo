@@ -109,6 +109,41 @@ if (process.env.DISCORD_TOKEN && process.env.DISCORD_TOKEN !== 'your_bot_token_h
 }
 
 
+// Cache webhook theo từng kênh. fetchWebhooks() là một request REST tới Discord và
+// dính rate limit theo kênh, nên gọi lại mỗi lần gửi sẽ làm emoji hiện ra chậm.
+const webhookCache = new Map();
+
+async function getWebhook(channel) {
+    const cached = webhookCache.get(channel.id);
+    if (cached) return cached;
+
+    const webhooks = await channel.fetchWebhooks();
+    let webhook = webhooks.find(wh => wh.token);
+
+    if (!webhook) {
+        webhook = await channel.createWebhook({
+            name: 'Capoo Webhook',
+            avatar: client.user.displayAvatarURL(),
+        });
+    }
+
+    webhookCache.set(channel.id, webhook);
+    return webhook;
+}
+
+// Webhook đã cache có thể bị admin xoá khỏi kênh. Nếu gửi hỏng thì bỏ cache và thử lại
+// đúng một lần; lỗi lần hai sẽ ném ra ngoài cho nhánh gửi trực tiếp xử lý.
+async function sendViaWebhook(channel, payload) {
+    try {
+        const webhook = await getWebhook(channel);
+        return await webhook.send(payload);
+    } catch (error) {
+        webhookCache.delete(channel.id);
+        const webhook = await getWebhook(channel);
+        return await webhook.send(payload);
+    }
+}
+
 // Xử lý khi người dùng dùng Lệnh /capoo
 client.on('interactionCreate', async interaction => {
     if (interaction.isAutocomplete()) {
@@ -135,19 +170,9 @@ client.on('interactionCreate', async interaction => {
         if (matchedEmoji) {
             await interaction.deferReply({ ephemeral: true });
             try {
-                const webhooks = await interaction.channel.fetchWebhooks();
-                let webhook = webhooks.find(wh => wh.token);
-
-                if (!webhook) {
-                    webhook = await interaction.channel.createWebhook({
-                        name: 'Capoo Webhook',
-                        avatar: client.user.displayAvatarURL(),
-                    });
-                }
-
                 const file = new AttachmentBuilder(matchedEmoji.path, { name: matchedEmoji.attachmentName });
 
-                await webhook.send({
+                await sendViaWebhook(interaction.channel, {
                     content: " ",
                     files: [file],
                     username: interaction.member?.displayName || interaction.user.username,
@@ -205,18 +230,8 @@ client.on('messageCreate', async (message) => {
 
     if (hasReplaced) {
         try {
-            const webhooks = await message.channel.fetchWebhooks();
-            let webhook = webhooks.find(wh => wh.token);
-
-            if (!webhook) {
-                webhook = await message.channel.createWebhook({
-                    name: 'Capoo Webhook',
-                    avatar: client.user.displayAvatarURL(),
-                });
-            }
-
             const finalContent = newContent.trim() !== "" ? newContent.trim() : " ";
-            await webhook.send({
+            await sendViaWebhook(message.channel, {
                 content: finalContent,
                 files: filesToSend,
                 username: message.member?.displayName || message.author.username,
