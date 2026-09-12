@@ -19,7 +19,7 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, 
 const express = require('express');
 const fs = require('fs');
 
-const VERSION = process.env.VERSION || 'v1';
+const VERSION = process.env.VERSION || 'v2';
 console.log(`Đang dùng version: ${VERSION}`);
 
 const gifs = {};
