@@ -18,7 +18,7 @@ Copy `.env.example` to `.env` and set:
 DISCORD_TOKEN=your_bot_token_here
 ```
 
-For cloud deployment, also set `PORT=10000`.
+Optionally `CAPOO_VERSION=v1` to serve the old image set. For cloud deployment, also set `PORT=10000`.
 
 ## Architecture
 
@@ -31,7 +31,7 @@ On startup, `index.js` builds an in-memory `gifs` map of `name → { path, attac
 1. `./png/<VERSION>/` — static PNG files (non-animated; usable without Nitro)
 2. `./gif/<VERSION>/` — animated GIF files; these are what actually get sent
 
-`VERSION` comes from the env var of the same name and defaults to `v2`. The PNG of a
+`VERSION` comes from the `CAPOO_VERSION` env var and defaults to `v2`. It is deliberately **not** named `VERSION` — the Koyeb service still has a stale `VERSION=v1` set in its dashboard that would override the default. The PNG of a
 matching name only supplies the lookup key; the GIF supplies the bytes.
 
 File names follow the pattern `<id>-<emojiname>.png/gif`. The leading `<id>-` is stripped and the extension removed to form the key (e.g., `1568-bugcat94.gif` → key `bugcat94`). GIFs take precedence over PNGs since they're loaded second.

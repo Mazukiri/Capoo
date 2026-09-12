@@ -19,7 +19,9 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, 
 const express = require('express');
 const fs = require('fs');
 
-const VERSION = process.env.VERSION || 'v2';
+// Knob là CAPOO_VERSION, không phải VERSION: trên Koyeb còn sót biến VERSION=v1 cũ
+// ghi đè mặc định, mà đổi biến đó phải vào dashboard. Đọc tên mới để code tự quyết.
+const VERSION = process.env.CAPOO_VERSION || 'v2';
 console.log(`Đang dùng version: ${VERSION}`);
 
 const gifs = {};
