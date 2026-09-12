@@ -28,8 +28,11 @@ Everything lives in a single file: `index.js`. There are no modules or subdirect
 
 On startup, `index.js` builds an in-memory `gifs` map of `name → { path, attachmentName }` from two sources, loaded in this order:
 
-1. `./png/` — static PNG files (non-animated; usable without Nitro)
-2. `./gif/` — animated GIF files (override PNGs for the same key)
+1. `./png/<VERSION>/` — static PNG files (non-animated; usable without Nitro)
+2. `./gif/<VERSION>/` — animated GIF files; these are what actually get sent
+
+`VERSION` comes from the env var of the same name and defaults to `v2`. The PNG of a
+matching name only supplies the lookup key; the GIF supplies the bytes.
 
 File names follow the pattern `<id>-<emojiname>.png/gif`. The leading `<id>-` is stripped and the extension removed to form the key (e.g., `1568-bugcat94.gif` → key `bugcat94`). GIFs take precedence over PNGs since they're loaded second.
 
@@ -59,5 +62,6 @@ An Express server listens on `PORT` (default `10000`) and responds to `GET /` wi
 
 ## Adding new emojis
 
-- **Local file**: drop the file in `./gif/` (animated) or `./png/` (static) with the naming pattern `<id>-<name>.gif/png`. The key becomes `<name>` (lowercased).
+- **Local file**: drop the file in `./gif/<VERSION>/` (animated) and `./png/<VERSION>/` (static) under the same `<id>-<name>` stem. For `v2` the lookup key is the full PNG stem, e.g. `002-capoo-relax`.
+- **Server emoji**: `npm run sync-emojis -- --dry` then `npm run sync-emojis` uploads the PNGs as static server emojis on every guild the bot is in, diffing by name so only changes cost requests. See `scripts/README.md`. Uploading is optional — the bot also matches `:name:` typed as plain text.
 - **Slash command autocomplete limit**: Discord limits autocomplete responses to 25 items. The autocomplete handler already slices to 25 (`filtered.slice(0, 25)`), so users must type enough to narrow the list.
