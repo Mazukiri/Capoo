@@ -69,6 +69,16 @@ console.log(`Đã load ${Object.keys(gifs).length} emoji từ ${VERSION}`);
 const app = express();
 const port = process.env.PORT || 10000;
 app.get('/', (req, res) => res.send('Bot is ALIVE!'));
+// Cho biết bản đang chạy thật sự dùng bộ ảnh nào và đã vào được Discord chưa, để kiểm
+// tra sau khi deploy mà không cần mở log trên Koyeb.
+app.get('/status', (req, res) => res.json({
+    version: VERSION,
+    emojiCount: Object.keys(gifs).length,
+    loggedIn: Boolean(client.user),
+    tag: client.user?.tag ?? null,
+    guilds: client.guilds?.cache?.size ?? null,
+    uptimeSeconds: Math.round(process.uptime()),
+}));
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const client = new Client({
